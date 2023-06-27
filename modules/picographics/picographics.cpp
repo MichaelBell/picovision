@@ -8,6 +8,7 @@ using namespace pimoroni;
 
 extern "C" {
 #include "picographics.h"
+#include "pimoroni_i2c.h"
 #include "py/stream.h"
 #include "py/reader.h"
 #include "extmod/vfs.h"
@@ -44,12 +45,13 @@ size_t get_required_buffer_size(PicoGraphicsPenType pen_type, uint width, uint h
 mp_obj_t ModPicoGraphics_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
     ModPicoGraphics_obj_t *self = nullptr;
 
-    enum { ARG_display, ARG_pen_type, ARG_width, ARG_height };
+    enum { ARG_display, ARG_pen_type, ARG_width, ARG_height, ARG_i2c };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_display, MP_ARG_INT | MP_ARG_REQUIRED },
         { MP_QSTR_pen_type, MP_ARG_INT, { .u_int = PEN_DV_RGB888 } },
         { MP_QSTR_width, MP_ARG_INT, { .u_int = 320 } },
-        { MP_QSTR_height, MP_ARG_INT, { .u_int = 240 } }
+        { MP_QSTR_height, MP_ARG_INT, { .u_int = 240 } },
+        { MP_QSTR_i2c, MP_ARG_OBJ, {.u_obj = nullptr} }
     };
 
     // Parse args.
@@ -62,19 +64,24 @@ mp_obj_t ModPicoGraphics_make_new(const mp_obj_type_t *type, size_t n_args, size
     int width = args[ARG_width].u_int;
     int height = args[ARG_height].u_int;
     int pen_type = args[ARG_pen_type].u_int;
+    pimoroni::I2C* i2c;
+    if (args[ARG_i2c].u_obj)
+        i2c = (pimoroni::I2C *)PimoroniI2C_from_machine_i2c_or_native(args[ARG_i2c].u_obj)->i2c;
+    else
+        i2c = m_new_class(I2C, DVDisplay::I2C_SDA, DVDisplay::I2C_SCL);
 
     // Create an instance of the graphics library and DV display driver
     switch((PicoGraphicsPenType)pen_type) {
         case PEN_DV_RGB888:
-            self->display = m_new_class(DVDisplay, width, height, DVDisplay::MODE_RGB888);
+            self->display = m_new_class(DVDisplay, width, height, i2c, DVDisplay::MODE_RGB888);
             self->graphics = m_new_class(PicoGraphics_PenDV_RGB888, width, height, *(IDirectDisplayDriver<RGB888> *)self->display);
             break;
         case PEN_DV_RGB555:
-            self->display = m_new_class(DVDisplay, width, height, DVDisplay::MODE_RGB555);
+            self->display = m_new_class(DVDisplay, width, height, i2c, DVDisplay::MODE_RGB555);
             self->graphics = m_new_class(PicoGraphics_PenDV_RGB555, width, height, *(IDirectDisplayDriver<uint16_t> *)self->display);
             break;
         case PEN_DV_P5:
-            self->display = m_new_class(DVDisplay, width, height, DVDisplay::MODE_PALETTE);
+            self->display = m_new_class(DVDisplay, width, height, i2c, DVDisplay::MODE_PALETTE);
             self->graphics = m_new_class(PicoGraphics_PenDV_P5, width, height, *(IPaletteDisplayDriver *)self->display);
             break;
         default:
