@@ -103,8 +103,7 @@ extern mp_obj_t ModPicoGraphics_triangle(size_t n_args, const mp_obj_t *args);
 extern mp_obj_t ModPicoGraphics_line(size_t n_args, const mp_obj_t *args);
 
 // Sprites
-//extern mp_obj_t ModPicoGraphics_set_spritesheet(mp_obj_t self_in, mp_obj_t spritedata);
-//extern mp_obj_t ModPicoGraphics_load_spritesheet(mp_obj_t self_in, mp_obj_t filename);
+extern mp_obj_t ModPicoGraphics_load_sprite(mp_obj_t self_in, mp_obj_t sprite_index, mp_obj_t filename);
 extern mp_obj_t ModPicoGraphics_display_sprite(size_t n_args, const mp_obj_t *args);
 extern mp_obj_t ModPicoGraphics_clear_sprite(mp_obj_t self_in, mp_obj_t slot);
 

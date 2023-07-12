@@ -143,29 +143,8 @@ mp_obj_t ModPicoGraphics_set_scroll_index_for_lines(size_t n_args, const mp_obj_
     return mp_const_none;
 }
 
-#if 0
-mp_obj_t ModPicoGraphics_set_spritesheet(mp_obj_t self_in, mp_obj_t spritedata) {
-    ModPicoGraphics_obj_t *self = MP_OBJ_TO_PTR2(self_in, ModPicoGraphics_obj_t);
-    if(spritedata == mp_const_none) {
-        self->spritedata = nullptr;
-    } else {
-        mp_buffer_info_t bufinfo;
-        mp_get_buffer_raise(spritedata, &bufinfo, MP_BUFFER_RW);
-
-        int required_size = get_required_buffer_size((PicoGraphicsPenType)self->graphics->pen_type, 128, 128);
-
-        if(bufinfo.len != (size_t)(required_size)) {
-            mp_raise_ValueError("Spritesheet the wrong size!");
-        }
-
-        self->spritedata = bufinfo.buf;
-    }
-    return mp_const_none;
-}
-
-mp_obj_t ModPicoGraphics_load_spritesheet(mp_obj_t self_in, mp_obj_t filename) {
-    ModPicoGraphics_obj_t *self = MP_OBJ_TO_PTR2(self_in, ModPicoGraphics_obj_t);
-    mp_obj_t args[2] = {
+mp_obj_t ModPicoGraphics_load_sprite(mp_obj_t self_in, mp_obj_t sprite_index, mp_obj_t filename) {
+    mp_obj_t file_args[2] = {
         filename,
         MP_OBJ_NEW_QSTR(MP_QSTR_r),
     };
@@ -178,18 +157,18 @@ mp_obj_t ModPicoGraphics_load_spritesheet(mp_obj_t self_in, mp_obj_t filename) {
 
     mp_buffer_info_t bufinfo;
     bufinfo.buf = (void *)m_new(uint8_t, filesize);
-    mp_obj_t file = mp_vfs_open(MP_ARRAY_SIZE(args), &args[0], (mp_map_t *)&mp_const_empty_map);
+    mp_obj_t file = mp_vfs_open(MP_ARRAY_SIZE(file_args), &file_args[0], (mp_map_t *)&mp_const_empty_map);
     int errcode;
     bufinfo.len = mp_stream_rw(file, bufinfo.buf, filesize, &errcode, MP_STREAM_RW_READ | MP_STREAM_RW_ONCE);
     if (errcode != 0) {
         mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("Failed to open sprite file!"));
     }
 
-    self->spritedata = bufinfo.buf;
+    dv_display.load_pvs_sprite(mp_obj_get_int(sprite_index), (uint32_t*)bufinfo.buf, bufinfo.len);
+    m_del(uint8_t, bufinfo.buf, filesize);
 
     return mp_const_none;
 }
-#endif
 
 mp_obj_t ModPicoGraphics_display_sprite(size_t n_args, const mp_obj_t *args) {
     enum { ARG_self, ARG_slot, ARG_sprite_index, ARG_x, ARG_y };
