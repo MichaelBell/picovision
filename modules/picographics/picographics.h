@@ -88,6 +88,9 @@ extern mp_obj_t ModPicoGraphics_get_bounds(mp_obj_t self_in);
 
 extern mp_obj_t ModPicoGraphics_get_i2c(mp_obj_t self_in);
 
+extern mp_obj_t ModPicoGraphics_start_usb_gpio(mp_obj_t self_in);
+extern mp_obj_t ModPicoGraphics_get_usb_gpio_state(mp_obj_t self_in);
+
 extern mp_obj_t ModPicoGraphics__del__(mp_obj_t self_in);
 
 // IO IO

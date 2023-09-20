@@ -1,0 +1,67 @@
+; The PicoSystem -> PicoVision controller interface runs over the USB DP line.
+;
+; This PIO receives the contents of the USBPHY_DIRECT register at 500kHz
+; by DMA.  The state of the DP is in bit 17 of the incoming data word
+;
+; The data is transmitted with at 100k baud and the protocol is:
+; - Line high for at least 60 bits (0.6ms)
+; - One 32-bit word of state is transmitted, MSB first.  The top byte is always 01011010 (0x5A).
+;
+; The PIO works by:
+; - Waiting for 256 samples (51.2 bit times) of line high
+; - Waiting for high to low transition
+; - Sampling at roughly the centre of each bit
+;
+; OUT is set to auto pull after 18 bits, shifting right
+; IN is set to auto push after 32 bits, shifting left
+.program usb_gpio
+reset_count:
+  mov isr, ~null
+  in null, 24
+  mov y, ::isr ; Y = 255
+high_loop:
+  pull
+  out null, 17
+  out x, 1
+  jmp !x reset_count
+  jmp y-- high_loop
+
+wait_loop:
+  pull
+  out null, 17
+  out x, 1
+  jmp !x start
+  jmp wait_loop
+
+start:
+;  in null, 2
+;  mov y, ::isr ; y = 63
+  set y, 31
+
+  mov isr, null
+  
+  pull ; Skip one sample, next should be the centre
+  pull
+bit_loop:
+  out null, 17
+  in osr, 1
+  set x, 4
+discard_loop:
+  pull
+  jmp x-- discard_loop
+  jmp y-- bit_loop
+
+  ;  out null, 17
+  ;  in osr, 1
+  ;  pull
+
+% c-sdk {
+void usb_gpio_program_init(PIO pio, uint sm, uint offset) {
+    pio_sm_config c = usb_gpio_program_get_default_config(offset);
+    sm_config_set_in_shift(&c, false, true, 32);
+    sm_config_set_out_shift(&c, true, false, 18);
+
+    pio_sm_init(pio, sm, offset, &c);
+    pio_sm_set_enabled(pio, sm, true);
+}
+%}

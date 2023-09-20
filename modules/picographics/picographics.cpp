@@ -1,4 +1,5 @@
 #include "drivers/dv_display/dv_display.hpp"
+#include "drivers/usb_gpio/usb_gpio.hpp"
 #include "libraries/pico_graphics/pico_graphics_dv.hpp"
 #include "common/pimoroni_common.hpp"
 
@@ -26,6 +27,7 @@ const std::string_view mp_obj_to_string_r(const mp_obj_t &obj) {
 
 static I2C dv_i2c(DVDisplay::I2C_SDA, DVDisplay::I2C_SCL);
 static DVDisplay dv_display(&dv_i2c);
+static USBGPIO usb_gpio;
 
 typedef struct _ModPicoGraphics_obj_t {
     mp_obj_base_t base;
@@ -1185,5 +1187,13 @@ mp_obj_t ModPicoGraphics_get_i2c(mp_obj_t self_in) {
     i2c_obj->i2c = &dv_i2c;
 
     return i2c_obj;
+}
+
+mp_obj_t ModPicoGraphics_start_usb_gpio(mp_obj_t self_in) {
+    return mp_obj_new_bool(usb_gpio.init());
+}
+
+mp_obj_t ModPicoGraphics_get_usb_gpio_state(mp_obj_t self_in) {
+    return mp_obj_new_int(usb_gpio.get_state());
 }
 }

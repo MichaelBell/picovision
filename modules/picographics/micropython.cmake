@@ -12,6 +12,7 @@ target_sources(usermod_${MOD_NAME} INTERFACE
     ${PICOVISION_PATH}/drivers/dv_display/dv_display.cpp
     ${PICOVISION_PATH}/drivers/dv_display/swd_load.cpp
     ${PICOVISION_PATH}/drivers/aps6404/aps6404.cpp
+    ${PICOVISION_PATH}/drivers/usb_gpio/usb_gpio.cpp
     ${PIMORONI_PICO_PATH}/libraries/pico_graphics/pico_graphics.cpp
     ${PICOVISION_PATH}/libraries/pico_graphics/pico_graphics_pen_dv_rgb888.cpp
     ${PICOVISION_PATH}/libraries/pico_graphics/pico_graphics_pen_dv_rgb555.cpp
@@ -21,6 +22,7 @@ target_sources(usermod_${MOD_NAME} INTERFACE
 
 pico_generate_pio_header(usermod_${MOD_NAME} ${PICOVISION_PATH}/drivers/dv_display/swd.pio)
 pico_generate_pio_header(usermod_${MOD_NAME} ${PICOVISION_PATH}/drivers/aps6404/aps6404.pio)
+pico_generate_pio_header(usermod_${MOD_NAME} ${PICOVISION_PATH}/drivers/usb_gpio/usb_gpio.pio)
 
 
 target_include_directories(usermod_${MOD_NAME} INTERFACE
