@@ -69,8 +69,8 @@ extern int32_t pngdec_read_callback(PNGFILE *png, uint8_t *p, int32_t c);
 extern int32_t pngdec_seek_callback(PNGFILE *png, int32_t p);
 
 void PNGDrawSprite_Indexed(PNGDRAW *pDraw) {
-#ifdef MICROPY_EVENT_POLL_HOOK
-MICROPY_EVENT_POLL_HOOK
+#ifdef mp_event_handle_nowait
+    mp_event_handle_nowait();
 #endif
     _PNG_decode_target *target = (_PNG_decode_target*)pDraw->pUser;
 
@@ -108,8 +108,8 @@ MICROPY_EVENT_POLL_HOOK
 }
 
 void PNGDrawSprite(PNGDRAW *pDraw) {
-#ifdef MICROPY_EVENT_POLL_HOOK
-MICROPY_EVENT_POLL_HOOK
+#ifdef mp_event_handle_nowait
+    mp_event_handle_nowait();
 #endif
     _PNG_decode_target *target = (_PNG_decode_target*)pDraw->pUser;
 
@@ -184,8 +184,7 @@ mp_obj_t ModPicoGraphics_make_new(const mp_obj_type_t *type, size_t n_args, size
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    self = m_new_obj_with_finaliser(ModPicoGraphics_obj_t);
-    self->base.type = &ModPicoGraphics_type;
+    self = mp_obj_malloc_with_finaliser(ModPicoGraphics_obj_t, &ModPicoGraphics_type);
 
     bool status = false;
     int width = args[ARG_width].u_int;
@@ -1208,7 +1207,9 @@ mp_obj_t ModPicoGraphics_loop(mp_obj_t self_in, mp_obj_t update, mp_obj_t render
         result = mp_call_function_1(render, mp_obj_new_int(tick));
         if (result == mp_const_false) break;
         dv_display.flip_async();
-        MICROPY_EVENT_POLL_HOOK
+#ifdef mp_event_handle_nowait
+        mp_event_handle_nowait();
+#endif
     }
     return mp_const_none;
 }

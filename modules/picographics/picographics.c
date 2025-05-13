@@ -77,7 +77,7 @@ MP_DEFINE_CONST_FUN_OBJ_1(ModPicoGraphics_get_gpu_temp_obj, ModPicoGraphics_get_
 MP_DEFINE_CONST_FUN_OBJ_3(ModPicoGraphics_loop_obj, ModPicoGraphics_loop);
 
 
-STATIC const mp_rom_map_elem_t ModPicoGraphics_locals_dict_table[] = {
+static const mp_rom_map_elem_t ModPicoGraphics_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_pixel), MP_ROM_PTR(&ModPicoGraphics_pixel_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_pen), MP_ROM_PTR(&ModPicoGraphics_set_pen_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_thickness), MP_ROM_PTR(&ModPicoGraphics_set_thickness_obj) },
@@ -143,7 +143,7 @@ STATIC const mp_rom_map_elem_t ModPicoGraphics_locals_dict_table[] = {
 
     { MP_ROM_QSTR(MP_QSTR___del__), MP_ROM_PTR(&ModPicoGraphics__del__obj) },
 };
-STATIC MP_DEFINE_CONST_DICT(ModPicoGraphics_locals_dict, ModPicoGraphics_locals_dict_table);
+static MP_DEFINE_CONST_DICT(ModPicoGraphics_locals_dict, ModPicoGraphics_locals_dict_table);
 
 /***** Class Definition *****/
 #ifdef MP_DEFINE_CONST_OBJ_TYPE
@@ -164,7 +164,7 @@ const mp_obj_type_t ModPicoGraphics_type = {
 #endif
 
 /***** Module Globals *****/
-STATIC const mp_map_elem_t picographics_globals_table[] = {
+static const mp_map_elem_t picographics_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_OBJ_NEW_QSTR(MP_QSTR_picovision) },
     { MP_ROM_QSTR(MP_QSTR_PicoVision), (mp_obj_t)&ModPicoGraphics_type },
 
@@ -187,7 +187,7 @@ STATIC const mp_map_elem_t picographics_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_WIDESCREEN), MP_ROM_FALSE },
 #endif
 };
-STATIC MP_DEFINE_CONST_DICT(mp_module_picographics_globals, picographics_globals_table);
+static MP_DEFINE_CONST_DICT(mp_module_picographics_globals, picographics_globals_table);
 
 /***** Module Definition *****/
 const mp_obj_module_t picographics_user_cmodule = {

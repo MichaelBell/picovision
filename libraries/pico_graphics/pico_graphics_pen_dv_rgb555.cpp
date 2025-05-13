@@ -58,17 +58,11 @@ namespace pimoroni {
         driver.write_pixel(p, blended);
     };
 
-    bool PicoGraphics_PenDV_RGB555::render_pico_vector_tile(const Rect &src_bounds, uint8_t* alpha_data, uint32_t stride, uint8_t alpha_type) {
-        
-        // Alpha configuration
-        const uint8_t alpha_map4[4] = { 0, 8, 12, 15 };
-        const uint8_t alpha_map16[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
-        const uint8_t* alpha_map = (alpha_type == 2) ? alpha_map16 : alpha_map4;
-        const uint8_t alpha_max = (alpha_type == 2) ? 16 : 4;
-
+    bool PicoGraphics_PenDV_RGB555::render_tile(const Tile *tile) {
+        const Rect src_bounds(tile->x, tile->y, tile->w, tile->h);
         const Rect bounds = src_bounds.intersection(clip);
         if (bounds.w <= 0 || bounds.h <= 0) return true;
-        alpha_data += bounds.x - src_bounds.x + stride * (bounds.y - src_bounds.y);
+        uint8_t* alpha_data = tile->data + bounds.x - src_bounds.x + tile->stride * (bounds.y - src_bounds.y);
         
         // Double buffering - in the main loop one buffer is being written to the PSRAM or read into 
         // in the background while the other is processed
@@ -103,14 +97,14 @@ namespace pimoroni {
             address += address_stride;
 
             // Process this row
-            uint8_t* alpha_ptr = &alpha_data[stride * y];
+            uint8_t* alpha_ptr = &alpha_data[tile->stride * y];
             if (blend_mode == BlendMode::TARGET) {
                 for (int32_t x = 0; x < bounds.w; ++x) {
                     uint8_t alpha = *alpha_ptr++;
-                    if (alpha >= alpha_max) {
+                    if (alpha == 255) {
                         wbuf[x] = (uint16_t)(color | depth);
                     } else if (alpha > 0) {
-                        alpha = alpha_map[alpha];
+                        alpha >>= 4;
 
                         uint16_t src = wbuf[x];
 
@@ -128,10 +122,10 @@ namespace pimoroni {
             } else {
                 for (int32_t x = 0; x < bounds.w; ++x) {
                     uint8_t alpha = *alpha_ptr++;
-                    if (alpha >= alpha_max) {
+                    if (alpha == 255) {
                         wbuf[x] = (uint16_t)(color | depth);
                     } else if (alpha > 0) {
-                        alpha = alpha_map[alpha];
+                        alpha >>= 4;
 
                         const uint32_t blended = background_expanded * (16 - alpha) + colour_expanded * alpha;
                         wbuf[x] = ((blended >> 14) & 0x7C00) | ((blended >> 9) & 0x3E0) | ((blended >> 4) & 0x1F) | (alpha > 7 ? depth : 0);

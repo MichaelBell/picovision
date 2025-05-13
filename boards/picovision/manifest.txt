@@ -1,0 +1,11 @@
+*.af
+*.png
+main.py
+rainbow_wheel.py
+screenmodes.py
+scrollgroups.py
+starfield_rainbow.py
+starfield.py
+secrets.py
+vector_clock.py
+vector_clock_smooth.py

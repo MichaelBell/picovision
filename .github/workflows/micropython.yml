@@ -1,4 +1,4 @@
-name: MicroPython Firmware
+name: MicroPython
 
 on:
   push:
@@ -6,165 +6,90 @@ on:
   release:
     types: [created]
 
-env:
-  MICROPYTHON_VERSION: 856e08b1931b88271816a2f60648f6ff332235b2
-  PIMORONI_PICO_VERSION: v1.21.0
-  WORKFLOW_VERSION: v1
-
 jobs:
-  deps:
-    runs-on: ubuntu-24.04
-    name: Dependencies
-    steps:
-    - name: Workspace Cache
-      id: cache
-      uses: actions/cache@v4
-      with:
-        path: ${{runner.workspace}}
-        key: workspace-micropython-${{env.MICROPYTHON_VERSION}}-${{env.WORKFLOW_VERSION}}
-        restore-keys: |
-          workspace-micropython-${{env.MICROPYTHON_VERSION}}-${{env.WORKFLOW_VERSION}}
-
-    # Check out MicroPython
-    - name: Checkout MicroPython
-      if: steps.cache.outputs.cache-hit != 'true'
-      uses: actions/checkout@v4
-      with:
-        repository: micropython/micropython
-        ref: ${{env.MICROPYTHON_VERSION}}
-        submodules: false  # MicroPython submodules are hideously broken
-        path: micropython
-
-    - name: Fetch Pico submodules
-      if: steps.cache.outputs.cache-hit != 'true'
-      shell: bash
-      working-directory: micropython
-      run: |
-        git submodule update --init lib/pico-sdk
-        git submodule update --init lib/cyw43-driver
-        git submodule update --init lib/lwip
-        git submodule update --init lib/mbedtls
-        git submodule update --init lib/micropython-lib
-        git submodule update --init lib/tinyusb
-        git submodule update --init lib/btstack
-
-    - name: Build mpy-cross
-      if: steps.cache.outputs.cache-hit != 'true'
-      shell: bash
-      working-directory: micropython/mpy-cross
-      run: make
-
   build:
-    needs: deps
-    name: Build ${{matrix.name}}
+    name: MicroPython ${{ matrix.name }}
     runs-on: ubuntu-24.04
+    continue-on-error: true
     strategy:
       matrix:
         include:
-          - name: PicoVision
-            shortname: picovision
-            board: PIMORONI_PICOVISION
-            cmake_settings:
-          - name: PicoVision Widescreen
-            shortname: picovision-widescreen
-            board: PIMORONI_PICOVISION
-            cmake_settings: -DSUPPORT_WIDE_MODES=1
+        - name: picovision
 
     env:
-      RELEASE_FILE: pimoroni-${{matrix.shortname}}-${{github.event.release.tag_name || github.sha}}-micropython.uf2
-      FIRMWARE_DIR: "$GITHUB_WORKSPACE/picovision/firmware"
-      BOARD_DIR: "$GITHUB_WORKSPACE/picovision/firmware/${{matrix.board}}"
+      # MicroPython version will be contained in github.event.release.tag_name for releases
+      CI_RELEASE_FILENAME: ${{ matrix.name }}-${{ github.event.release.tag_name || github.sha }}-micropython
+      CI_PROJECT_ROOT: ${{ github.workspace }}/src-${{ github.sha }}
+      CI_BUILD_ROOT: ${{ github.workspace }}
+      CI_USE_ENV: 1
 
     steps:
-    - name: Compiler Cache
-      uses: actions/cache@v3
+    - name: Compiler Cache Fixup
+      run: |
+        mkdir -p /home/runner/.ccache
+  
+    - name: "CCache: Restore saved cache"
+      uses: actions/cache@v4
       with:
         path: /home/runner/.ccache
-        key: ccache-micropython-${{matrix.shortname}}-${{github.ref}}-${{github.sha}}
+        key: ccache-micropython-${{ matrix.name }}-${{ github.ref }}-${{ github.sha }}
         restore-keys: |
-          ccache-micropython-${{matrix.shortname}}-${{github.ref}}
-          ccache-micropython-${{matrix.shortname}}-
+          ccache-micropython-${{ matrix.name }}-${{ github.ref }}
+          ccache-micropython-${{ matrix.name }}-
 
-    - name: Workspace Cache
-      uses: actions/cache@v3
-      with:
-        path: ${{runner.workspace}}
-        key: workspace-micropython-${{env.MICROPYTHON_VERSION}}-${{env.WORKFLOW_VERSION}}
-        restore-keys: |
-          workspace-micropython-${{env.MICROPYTHON_VERSION}}-${{env.WORKFLOW_VERSION}}
-
-    - uses: actions/checkout@v4
+    - name: "Checkout Project"
+      uses: actions/checkout@v4
       with:
         submodules: true
-        path: picovision
+        path: ${{ env.CI_PROJECT_ROOT }}
 
-    # Check out Pimoroni Pico
-    - uses: actions/checkout@v4
-      with:
-        repository: pimoroni/pimoroni-pico
-        ref: ${{env.PIMORONI_PICO_VERSION}}
-        submodules: true
-        path: pimoroni-pico
-
-    # HACK: Patch startup overclock into Pico SDK
-    - name: "HACK: Startup Overclock Patch"
-      shell: bash
-      working-directory: micropython/lib/pico-sdk
-      run: |
-        git apply "${{env.FIRMWARE_DIR}}/startup_overclock.patch"
-
-    # Install apt packages
-    - name: Install CCache
-      shell: bash
-      run:
-        sudo apt update && sudo apt install ccache
-
-    - name: Install Arm GNU Toolchain (arm-none-eabi-gcc)
+    - name: "Install Arm GNU Toolchain (arm-none-eabi-gcc)"
       uses: carlosperate/arm-none-eabi-gcc-action@v1
       with:
         release: '13.3.Rel1'
 
-    # CMake 4.0 - erroneously introduced into GitHub runners? -
-    # removed support for <3.5 and mbedtls hits this
-    # https://github.com/raspberrypi/pico-sdk/issues/2391
-    # https://github.com/actions/runner-images/issues/11926
-    - name: Setup cmake
-      uses: jwlawson/actions-setup-cmake@v2
-      with:
-        cmake-version: '3.31.6'
-
-    - name: CMake Version
-      run: cmake --version
-
-    # Build firmware
-    - name: Configure MicroPython
+    - name: "Prepare tools & dependencies"
       shell: bash
-      working-directory: micropython/ports/rp2
       run: |
-        cmake -S . -B build -DPICO_BUILD_DOCS=0 -DUSER_C_MODULES=${{env.BOARD_DIR}}/micropython.cmake -DMICROPY_BOARD_DIR=${{env.BOARD_DIR}} -DMICROPY_BOARD=${{env.BOARD}} -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache ${{matrix.cmake_settings}}
+        source $CI_PROJECT_ROOT/ci/micropython.sh && ci_debug
+        mkdir -p $CI_BUILD_ROOT
+        ci_apt_install_build_deps
+        ci_prepare_all
 
-    - name: Build MicroPython
+    - name: "MicroPython: Configure"
       shell: bash
-      working-directory: micropython/ports/rp2
       run: |
-        ccache --zero-stats || true
-        cmake --build build -j 2
-        ccache --show-stats || true
+        source $CI_PROJECT_ROOT/ci/micropython.sh && ci_debug
+        micropython_version
+        ci_cmake_configure ${{ matrix.name }}
 
-    - name: Rename .uf2 for artifact
+    - name: "MicroPython: Build"
       shell: bash
-      working-directory: micropython/ports/rp2/build
       run: |
-        cp firmware.uf2 ${{env.RELEASE_FILE}}
+        source $CI_PROJECT_ROOT/ci/micropython.sh && ci_debug
+        ci_cmake_build ${{ matrix.name }}
 
-    - name: Store .uf2 as artifact
+    - name: "Artifacts: Upload .uf2"
       uses: actions/upload-artifact@v4
       with:
-        name: ${{env.RELEASE_FILE}}
-        path: micropython/ports/rp2/build/${{env.RELEASE_FILE}}
+        name: ${{ env.CI_RELEASE_FILENAME }}.uf2
+        path: ${{ env.CI_BUILD_ROOT }}/${{ env.CI_RELEASE_FILENAME }}.uf2
+        
+    - name: "Artifacts: Upload .uf2 (With Filesystem)"
+      uses: actions/upload-artifact@v4
+      with:
+        if-no-files-found: ignore
+        name: ${{ env.CI_RELEASE_FILENAME }}-with-filesystem.uf2
+        path: ${{ env.CI_BUILD_ROOT }}/${{ env.CI_RELEASE_FILENAME }}-with-filesystem.uf2
 
-    - name: Upload .uf2
+    - name: "Release: Upload .uf2"
       if: github.event_name == 'release'
       uses: softprops/action-gh-release@v1
       with:
-        files: micropython/ports/rp2/build/${{env.RELEASE_FILE}}
+        files: ${{ env.CI_BUILD_ROOT }}/${{ env.CI_RELEASE_FILENAME }}.uf2
+
+    - name: "Release: Upload .uf2 (With Filesystem)"
+      if: github.event_name == 'release'
+      uses: softprops/action-gh-release@v1
+      with:
+        files: ${{ env.CI_BUILD_ROOT }}/${{ env.CI_RELEASE_FILENAME }}-with-filesystem.uf2

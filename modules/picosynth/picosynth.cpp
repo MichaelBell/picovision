@@ -385,8 +385,7 @@ mp_obj_t PicoSynth_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_k
     PicoSynth_I2S *picosynth = m_new_class(PicoSynth_I2S, pin_data, pin_bclk, pin_lrclk, pio_int, sm);
     picosynth->init();
 
-    self = m_new_obj_with_finaliser(_PicoSynth_obj_t);
-    self->base.type = &PicoSynth_type;
+    self = mp_obj_malloc_with_finaliser(_PicoSynth_obj_t, &PicoSynth_type);
     self->picosynth = picosynth;
 
     return MP_OBJ_FROM_PTR(self);
@@ -458,8 +457,7 @@ extern mp_obj_t PicoSynth_synth_channel(mp_obj_t self_in, mp_obj_t channel_in) {
 
     // NOTE This seems to work, in that it give MP access to the calibration object
     // Could very easily mess up in weird ways once object deletion is considered?
-    _Channel_obj_t *channel_obj = m_new_obj_with_finaliser(_Channel_obj_t);
-    channel_obj->base.type = &Channel_type;
+    _Channel_obj_t *channel_obj = mp_obj_malloc_with_finaliser(_Channel_obj_t, &Channel_type);
     channel_obj->channel = &self->picosynth->synth_channel(channel);
 
     return MP_OBJ_FROM_PTR(channel_obj);

@@ -18,7 +18,7 @@ extern "C" {
 
 // Must be a C function
 static void my_thread_yield() {
-  MICROPY_EVENT_POLL_HOOK
+    mp_event_handle_nowait();
 }
 }
 #endif
